@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, session, redirect, url_for, flash
+from markupsafe import Markup, escape
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -42,7 +43,9 @@ def signup():
         db.session.add(new_user)
         db.session.commit()
 
-        return "You've registered successfully."
+        flash("You've registered succefully.", "success")
+
+        return redirect(url_for("login"))
 
     return render_template("signup.html")
 
@@ -52,11 +55,26 @@ def login():
         user = Users.query.filter_by(username=request.form["username"]).first()
 
         if user and check_password_hash(user.password, request.form["password"]):
-            return "You are logged in"
-        return "Your credentials are invalid, check and try again."
+            session["username"] = user.username
+            return "You are logged in"        
+        flash("Your credentials are invalid, check and try again.", "success")
 
     return render_template("login.html")
 
+@app.route("/home")
+def home():
+    if "username" in session:
+        return "Yoou are %s" % escape(session["username"])
+    
+    return "You must log in first."
+
+@app.route("/logout")
+def logout():
+    session.pop("username", None)
+
+    return "You are logged out."
+
+app.secret_key = "12345"
 
 if __name__ == "__main__":
     with app.app_context():
